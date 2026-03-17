@@ -237,9 +237,10 @@
 
   // Tasks
   async function loadTasks() {
-    const { data } = await sb.from('tasks')
+    const { data, error } = await sb.from('tasks')
       .select('*')
       .order('created_at', { ascending: true });
+    if (error) console.error('Load error:', error);
     tasks = data || [];
     render();
   }
@@ -248,7 +249,8 @@
     if (e.key === 'Enter' && taskInput.value.trim()) {
       const text = taskInput.value.trim();
       taskInput.value = '';
-      const { data } = await sb.from('tasks').insert({ text }).select().single();
+      const { data, error } = await sb.from('tasks').insert({ text }).select().single();
+      if (error) { console.error('Insert error:', error); alert(error.message); return; }
       if (data) { tasks.push(data); render(); }
     }
   });
