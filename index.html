@@ -227,7 +227,7 @@
   sb.auth.onAuthStateChange(async (event, session) => {
     if (session) {
       authDiv.style.display = 'none';
-      appDiv.style.display = '';
+      appDiv.style.display = 'block';
       await loadTasks();
     } else {
       authDiv.style.display = '';
