@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasks</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: #fafafa;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a1a; color: #e0e0e0; }
+    input { background: #2a2a2a; color: #e0e0e0; border-color: #444; }
+    input::placeholder { color: #777; }
+    .task { border-bottom-color: #333; }
+    .task:hover { background: #252525; }
+    .delete:hover { color: #ff6b6b; }
+    footer button { color: #888; }
+    footer button:hover { color: #bbb; }
+    #auth p { color: #aaa; }
+    #logout { color: #888; }
+    #logout:hover { color: #bbb; }
+    .msg { color: #aaa; }
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    color: #222;
+  }
+
+  input:focus { border-color: #999; }
+
+  /* Auth */
+  #auth {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #auth p {
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  #auth button {
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #222;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #auth button { background: #e0e0e0; color: #1a1a1a; }
+  }
+
+  .msg {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* App */
+  #app { display: none; }
+
+  #task-input { margin-bottom: 24px; }
+
+  #tasks { list-style: none; }
+
+  .task {
+    display: flex;
+    align-items: center;
+    padding: 10px 4px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    border-radius: 4px;
+    gap: 10px;
+  }
+
+  .task:hover { background: #f5f5f5; }
+
+  .task label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .task.done label {
+    text-decoration: line-through;
+    opacity: 0.4;
+  }
+
+  .task input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .delete {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px 6px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .delete:hover { color: #e74c3c; }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: #999;
+  }
+
+  footer button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px 0;
+  }
+
+  footer button:hover { color: #555; }
+
+  #logout {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+    margin-top: 32px;
+  }
+
+  #logout:hover { color: #555; }
+</style>
+</head>
+<body>
+  <h1>Tasks</h1>
+
+  <div id="auth">
+    <p>Sign in to sync tasks across devices.</p>
+    <input type="email" id="email" placeholder="Your email...">
+    <button onclick="sendMagicLink()">Send magic link</button>
+    <div id="auth-msg" class="msg"></div>
+  </div>
+
+  <div id="app">
+    <input type="text" id="task-input" placeholder="Add a task..." autofocus>
+    <ul id="tasks"></ul>
+    <footer>
+      <span id="status"></span>
+      <button id="clear" onclick="clearDone()">Clear completed</button>
+    </footer>
+    <button id="logout" onclick="logout()">Sign out</button>
+  </div>
+
+<script>
+  const SUPABASE_URL = 'https://xyapgjrybhabulezlofy.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5YXBnanJ5YmhhYnVsZXpsb2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzUyMTIsImV4cCI6MjA4ODgxMTIxMn0.KuGWS9F7_FBhVhb33r-NWE31WBHGaQkf1xqRDIptZ-0';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let tasks = [];
+  const authDiv = document.getElementById('auth');
+  const appDiv = document.getElementById('app');
+  const authMsg = document.getElementById('auth-msg');
+  const taskInput = document.getElementById('task-input');
+  const list = document.getElementById('tasks');
+  const statusEl = document.getElementById('status');
+  const clearBtn = document.getElementById('clear');
+
+  // Auth
+  async function sendMagicLink() {
+    const email = document.getElementById('email').value.trim();
+    if (!email) return;
+    authMsg.textContent = 'Sending...';
+    const { error } = await sb.auth.signInWithOtp({ email });
+    authMsg.textContent = error ? error.message : 'Check your email for the login link!';
+  }
+
+  async function logout() {
+    await sb.auth.signOut();
+    tasks = [];
+    authDiv.style.display = '';
+    appDiv.style.display = 'none';
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+      authDiv.style.display = 'none';
+      appDiv.style.display = '';
+      await loadTasks();
+    } else {
+      authDiv.style.display = '';
+      appDiv.style.display = 'none';
+    }
+  });
+
+  // Tasks
+  async function loadTasks() {
+    const { data } = await sb.from('tasks')
+      .select('*')
+      .order('created_at', { ascending: true });
+    tasks = data || [];
+    render();
+  }
+
+  taskInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter' && taskInput.value.trim()) {
+      const text = taskInput.value.trim();
+      taskInput.value = '';
+      const { data } = await sb.from('tasks').insert({ text }).select().single();
+      if (data) { tasks.push(data); render(); }
+    }
+  });
+
+  async function toggleTask(i) {
+    const t = tasks[i];
+    t.done = !t.done;
+    render();
+    await sb.from('tasks').update({ done: t.done }).eq('id', t.id);
+  }
+
+  async function deleteTask(i) {
+    const t = tasks[i];
+    tasks.splice(i, 1);
+    render();
+    await sb.from('tasks').delete().eq('id', t.id);
+  }
+
+  async function clearDone() {
+    const doneIds = tasks.filter(t => t.done).map(t => t.id);
+    tasks = tasks.filter(t => !t.done);
+    render();
+    await sb.from('tasks').delete().in('id', doneIds);
+  }
+
+  function render() {
+    list.innerHTML = '';
+    tasks.forEach((t, i) => {
+      const li = document.createElement('li');
+      li.className = 'task' + (t.done ? ' done' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = t.done;
+      cb.addEventListener('change', () => toggleTask(i));
+
+      const label = document.createElement('label');
+      label.textContent = t.text;
+      label.addEventListener('click', () => toggleTask(i));
+
+      const del = document.createElement('button');
+      del.className = 'delete';
+      del.textContent = '\u00d7';
+      del.addEventListener('click', e => { e.stopPropagation(); deleteTask(i); });
+
+      li.append(cb, label, del);
+      list.appendChild(li);
+    });
+
+    const done = tasks.filter(t => t.done).length;
+    const total = tasks.length;
+    statusEl.textContent = total ? `${done} of ${total} done` : '';
+    clearBtn.style.display = done ? '' : 'none';
+  }
+</script>
+</body>
+</html>
