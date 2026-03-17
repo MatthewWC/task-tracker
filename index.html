@@ -195,7 +195,13 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5YXBnanJ5YmhhYnVsZXpsb2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzUyMTIsImV4cCI6MjA4ODgxMTIxMn0.KuGWS9F7_FBhVhb33r-NWE31WBHGaQkf1xqRDIptZ-0';
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { lock: false }
+    auth: {
+      storageKey: 'task-tracker-auth',
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true
+    }
   });
 
   let tasks = [];
