@@ -194,9 +194,12 @@
   const SUPABASE_URL = 'https://xyapgjrybhabulezlofy.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5YXBnanJ5YmhhYnVsZXpsb2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzUyMTIsImV4cCI6MjA4ODgxMTIxMn0.KuGWS9F7_FBhVhb33r-NWE31WBHGaQkf1xqRDIptZ-0';
 
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { lock: false }
+  });
 
   let tasks = [];
+  let ready = false;
   const authDiv = document.getElementById('auth');
   const appDiv = document.getElementById('app');
   const authMsg = document.getElementById('auth-msg');
@@ -220,6 +223,7 @@
   async function logout() {
     await sb.auth.signOut();
     tasks = [];
+    ready = false;
     authDiv.style.display = '';
     appDiv.style.display = 'none';
   }
@@ -228,10 +232,14 @@
     if (session) {
       authDiv.style.display = 'none';
       appDiv.style.display = 'block';
-      await loadTasks();
+      if (!ready) {
+        ready = true;
+        await loadTasks();
+      }
     } else {
       authDiv.style.display = '';
       appDiv.style.display = 'none';
+      ready = false;
     }
   });
 
@@ -249,12 +257,9 @@
     if (e.key === 'Enter' && taskInput.value.trim()) {
       const text = taskInput.value.trim();
       taskInput.value = '';
-      try {
-        const { data, error } = await sb.from('tasks').insert({ text }).select().single();
-        alert('Result: ' + JSON.stringify({ data, error }));
-        if (error) return;
-        if (data) { tasks.push(data); render(); } else { await loadTasks(); }
-      } catch(e) { alert('Exception: ' + e.message); }
+      const { data, error } = await sb.from('tasks').insert({ text }).select().single();
+      if (error) { console.error('Insert error:', error); return; }
+      if (data) { tasks.push(data); render(); } else { await loadTasks(); }
     }
   });
 
