@@ -249,9 +249,12 @@
     if (e.key === 'Enter' && taskInput.value.trim()) {
       const text = taskInput.value.trim();
       taskInput.value = '';
-      const { data, error } = await sb.from('tasks').insert({ text }).select().single();
-      if (error) { console.error('Insert error:', error); alert(error.message); return; }
-      if (data) { tasks.push(data); render(); }
+      try {
+        const { data, error } = await sb.from('tasks').insert({ text }).select().single();
+        alert('Result: ' + JSON.stringify({ data, error }));
+        if (error) return;
+        if (data) { tasks.push(data); render(); } else { await loadTasks(); }
+      } catch(e) { alert('Exception: ' + e.message); }
     }
   });
 
