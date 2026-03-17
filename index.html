@@ -197,7 +197,7 @@
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       storageKey: 'task-tracker-auth',
-      flowType: 'implicit',
+      flowType: 'pkce',
       detectSessionInUrl: true,
       persistSession: true,
       autoRefreshToken: true
@@ -233,6 +233,17 @@
     authDiv.style.display = '';
     appDiv.style.display = 'none';
   }
+
+  // Handle PKCE code exchange on redirect
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('code')) {
+      const { error } = await sb.auth.exchangeCodeForSession(params.get('code'));
+      if (error) console.error('Code exchange error:', error);
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  })();
 
   sb.auth.onAuthStateChange(async (event, session) => {
     if (session) {
