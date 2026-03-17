@@ -197,7 +197,7 @@
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       storageKey: 'task-tracker-auth',
-      flowType: 'pkce',
+      flowType: 'implicit',
       detectSessionInUrl: true,
       persistSession: true,
       autoRefreshToken: true
