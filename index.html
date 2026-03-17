@@ -278,6 +278,7 @@
   }
 
   taskInput.addEventListener('keydown', async e => {
+    console.log('key:', e.key, 'value:', taskInput.value);
     if (e.key === 'Enter' && taskInput.value.trim()) {
       const text = taskInput.value.trim();
       taskInput.value = '';
