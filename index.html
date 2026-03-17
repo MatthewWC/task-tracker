@@ -194,6 +194,10 @@
   const SUPABASE_URL = 'https://xyapgjrybhabulezlofy.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5YXBnanJ5YmhhYnVsZXpsb2Z5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzUyMTIsImV4cCI6MjA4ODgxMTIxMn0.KuGWS9F7_FBhVhb33r-NWE31WBHGaQkf1xqRDIptZ-0';
 
+  // Disable navigator locks to prevent AbortError race conditions
+  const _locks = navigator.locks;
+  navigator.locks = undefined;
+
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       storageKey: 'task-tracker-auth',
@@ -203,6 +207,9 @@
       autoRefreshToken: true
     }
   });
+
+  // Restore locks after client init
+  navigator.locks = _locks;
 
   let tasks = [];
   let ready = false;
